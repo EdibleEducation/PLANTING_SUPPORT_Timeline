@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vegetable Harvest Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #228B22; /* New background color */
+        }
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+            display: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <!-- Main Container -->
+    <div class="max-w-xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden">
+        <div class="p-6 sm:p-8 space-y-6">
+
+            <!-- Header -->
+            <div class="text-center">
+                <h1 class="text-3xl sm:text-4xl font-bold text-green-700">Vegetable Planner</h1>
+                <p class="mt-2 text-green-600">Calculate your thinning and harvest dates!</p>
+            </div>
+
+            <!-- Input Form -->
+            <div class="space-y-4">
+                <div>
+                    <label for="plantingDate" class="block text-sm font-medium text-gray-700">1. Enter Planting Date</label>
+                    <input type="date" id="plantingDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 transition-all">
+                </div>
+                <div>
+                    <label for="vegetableSelect" class="block text-sm font-medium text-gray-700">2. Select a Vegetable</label>
+                    <select id="vegetableSelect" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 transition-all">
+                        <option value="">-- Please Select --</option>
+                        <option value="Beets">Beets</option>
+                        <option value="Radishes">Radishes</option>
+                        <option value="Turnips">Turnips</option>
+                        <option value="Carrots">Carrots</option>
+                        <option value="Lettuce">Lettuce</option>
+                        <option value="Kale">Kale</option>
+                        <option value="Swiss Chard">Swiss Chard</option>
+                        <option value="Spinach">Spinach</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div id="results" class="hidden">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Germination Card -->
+                    <div class="bg-gray-50 p-5 rounded-xl shadow-md space-y-3">
+                        <h3 class="text-lg font-semibold text-green-800">Germination Date</h3>
+                        <p class="text-sm text-gray-500">The day your seeds should sprout!</p>
+                        <p class="text-2xl font-bold text-gray-900" id="germinationDateDisplay">--</p>
+                        <p class="text-green-600 font-medium" id="germinationCountdown">Calculating...</p>
+                    </div>
+                    <!-- Thinning Card -->
+                    <div class="bg-gray-50 p-5 rounded-xl shadow-md space-y-3">
+                        <h3 class="text-lg font-semibold text-green-800">Thinning Date</h3>
+                        <p class="text-sm text-gray-500">Time to thin your seedlings for better growth.</p>
+                        <p class="text-2xl font-bold text-gray-900" id="thinningDateDisplay">--</p>
+                        <p class="text-green-600 font-medium" id="thinningCountdown">Calculating...</p>
+                        <p class="text-sm font-medium text-gray-700 mt-2">Thin when plant is:</p>
+                        <p class="text-lg font-bold text-gray-900" id="thinningHeightDisplay">--</p>
+                    </div>
+                    <!-- Harvesting Card -->
+                    <div class="bg-gray-50 p-5 rounded-xl shadow-md space-y-3">
+                        <h3 class="text-lg font-semibold text-green-800">Harvesting Date</h3>
+                        <p class="text-sm text-gray-500">The day to enjoy the fruits of your labor!</p>
+                        <p class="text-2xl font-bold text-gray-900" id="harvestDateDisplay">--</p>
+                        <p class="text-green-600 font-medium" id="harvestCountdown">Calculating...</p>
+                        <p class="text-sm font-medium text-gray-700 mt-2">Harvest when plant is:</p>
+                        <p class="text-lg font-bold text-gray-900" id="harvestSizeDisplay">--</p>
+                    </div>
+                    <!-- Nutritional Value Card -->
+                    <div class="bg-gray-50 p-5 rounded-xl shadow-md space-y-3">
+                        <h3 class="text-lg font-semibold text-green-800">Nutritional Value</h3>
+                        <p class="text-sm text-gray-500">Key vitamins and minerals of the vegetable.</p>
+                        <p class="text-base font-medium text-gray-900" id="nutritionalValueDisplay">--</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message Box -->
+            <div id="messageBox" class="message-box rounded-xl">
+                <p id="messageText" class="text-center font-semibold text-gray-700 mb-4"></p>
+                <button id="closeButton" class="px-6 py-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const vegetableData = {
+            Beets: { germinationDays: 7, thinWeeks: 4, harvestWeeks: 9, thinHeight: "2-3 inches", harvestSize: "1-3 inches in diameter", nutritionalValue: "Rich in fiber, folate (vitamin B9), manganese, potassium, iron, and vitamin C." },
+            Radishes: { germinationDays: 5, thinWeeks: 2, harvestWeeks: 4, thinHeight: "1-2 inches", harvestSize: "1 inch in diameter", nutritionalValue: "Excellent source of vitamin C. Also contains folate, fiber, and potassium." },
+            Turnips: { germinationDays: 5, thinWeeks: 3, harvestWeeks: 8, thinHeight: "3-4 inches", harvestSize: "2-3 inches in diameter", nutritionalValue: "Good source of vitamin C, fiber, and potassium. The greens are packed with vitamins K, A, and C." },
+            Carrots: { germinationDays: 15, thinWeeks: 4, harvestWeeks: 12, thinHeight: "2 inches", harvestSize: "1/2-1 inch in diameter", nutritionalValue: "High in beta-carotene (which converts to vitamin A), fiber, vitamin K1, and potassium." },
+            Lettuce: { germinationDays: 8, thinWeeks: 3, harvestWeeks: 8, thinHeight: "4 inches", harvestSize: "A full head or outer leaves", nutritionalValue: "High in vitamin K and vitamin A. Also contains folate and iron." },
+            Kale: { germinationDays: 8, thinWeeks: 4, harvestWeeks: 10, thinHeight: "4-6 inches", harvestSize: "Leaves are 8-10 inches long", nutritionalValue: "Powerhouse of vitamins A, K, C, and B6. Also rich in manganese, calcium, and potassium." },
+            "Swiss Chard": { germinationDays: 8, thinWeeks: 4, harvestWeeks: 9, thinHeight: "4 inches", harvestSize: "Leaves are 6-8 inches long", nutritionalValue: "Excellent source of vitamins A, K, and C. Also contains magnesium, potassium, and iron." },
+            Spinach: { germinationDays: 10, thinWeeks: 3, harvestWeeks: 6, thinHeight: "2 inches", harvestSize: "Leaves are 3-5 inches long", nutritionalValue: "High in iron, vitamin K, vitamin A, and folate. Also a good source of fiber." },
+        };
+
+        const plantingDateInput = document.getElementById('plantingDate');
+        const vegetableSelect = document.getElementById('vegetableSelect');
+        const resultsDiv = document.getElementById('results');
+
+        const germinationDateDisplay = document.getElementById('germinationDateDisplay');
+        const germinationCountdownDisplay = document.getElementById('germinationCountdown');
+        const thinningDateDisplay = document.getElementById('thinningDateDisplay');
+        const harvestDateDisplay = document.getElementById('harvestDateDisplay');
+        const thinningCountdownDisplay = document.getElementById('thinningCountdown');
+        const harvestCountdownDisplay = document.getElementById('harvestCountdown');
+        const thinningHeightDisplay = document.getElementById('thinningHeightDisplay');
+        const harvestSizeDisplay = document.getElementById('harvestSizeDisplay');
+        const nutritionalValueDisplay = document.getElementById('nutritionalValueDisplay');
+        
+        const messageBox = document.getElementById('messageBox');
+        const messageText = document.getElementById('messageText');
+        const closeButton = document.getElementById('closeButton');
+
+        // Function to show a custom message box instead of alert()
+        function showMessage(message) {
+            messageText.textContent = message;
+            messageBox.style.display = 'block';
+        }
+
+        // Function to close the custom message box
+        closeButton.addEventListener('click', () => {
+            messageBox.style.display = 'none';
+        });
+
+        // Function to calculate and display the dates
+        function calculateDates() {
+            const plantingDateStr = plantingDateInput.value;
+            const selectedVeg = vegetableSelect.value;
+
+            if (!plantingDateStr || !selectedVeg) {
+                // Hide results if input is incomplete
+                resultsDiv.classList.add('hidden');
+                return;
+            }
+
+            const plantingDate = new Date(plantingDateStr + 'T00:00:00');
+            const today = new Date();
+            const germinationDays = vegetableData[selectedVeg].germinationDays;
+            const daysToThin = vegetableData[selectedVeg].thinWeeks * 7;
+            const daysToHarvest = vegetableData[selectedVeg].harvestWeeks * 7;
+            const thinHeight = vegetableData[selectedVeg].thinHeight;
+            const harvestSize = vegetableData[selectedVeg].harvestSize;
+            const nutritionalValue = vegetableData[selectedVeg].nutritionalValue;
+
+            // Calculate germination date
+            const germinationDate = new Date(plantingDate);
+            germinationDate.setDate(plantingDate.getDate() + germinationDays);
+
+            // Calculate thinning date
+            const thinningDate = new Date(plantingDate);
+            thinningDate.setDate(plantingDate.getDate() + daysToThin);
+
+            // Calculate harvest date
+            const harvestDate = new Date(plantingDate);
+            harvestDate.setDate(plantingDate.getDate() + daysToHarvest);
+
+            // Format dates for display
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            germinationDateDisplay.textContent = formatter.format(germinationDate);
+            thinningDateDisplay.textContent = formatter.format(thinningDate);
+            harvestDateDisplay.textContent = formatter.format(harvestDate);
+            thinningHeightDisplay.textContent = thinHeight;
+            harvestSizeDisplay.textContent = harvestSize;
+            nutritionalValueDisplay.textContent = nutritionalValue;
+
+            // Calculate countdowns
+            const germinationTimeRemaining = germinationDate.getTime() - today.getTime();
+            const thinningTimeRemaining = thinningDate.getTime() - today.getTime();
+            const harvestTimeRemaining = harvestDate.getTime() - today.getTime();
+
+            function formatCountdown(timeRemaining) {
+                if (timeRemaining < 0) {
+                    return "Past due!";
+                }
+                const days = Math.ceil(timeRemaining / (1000 * 60 * 60 * 24));
+                if (days === 0) {
+                    return "Today!";
+                }
+                if (days === 1) {
+                    return "In 1 day";
+                }
+                return `In ${days} days`;
+            }
+
+            germinationCountdownDisplay.textContent = formatCountdown(germinationTimeRemaining);
+            thinningCountdownDisplay.textContent = formatCountdown(thinningTimeRemaining);
+            harvestCountdownDisplay.textContent = formatCountdown(harvestTimeRemaining);
+
+            // Show the results section
+            resultsDiv.classList.remove('hidden');
+        }
+
+        // Event listeners to trigger calculations on input change
+        plantingDateInput.addEventListener('change', calculateDates);
+        vegetableSelect.addEventListener('change', calculateDates);
+
+    </script>
+
+</body>
+</html>
