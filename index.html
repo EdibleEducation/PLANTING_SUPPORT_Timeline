@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vegetable Harvest Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #228B22;
+        }
+        .message-box {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            z-index: 1000;
+            display: none;
+            text-align: center;
+        }
+        /* Styles to ensure a clean, legible printout */
+        @media print {
+            body {
+                background-color: white !important;
+                padding: 0 !important;
+            }
+            /* Hide the main container background/shadow for printing */
+            .bg-white, .shadow-xl {
+                box-shadow: none !important;
+            }
+            /* Elements we want to hide when printing: inputs, buttons, messages */
+            .print-hide { 
+                display: none !important;
+            }
+            /* Ensure the report content fills the page and cards stack cleanly */
+            .max-w-xl {
+                max-width: 100% !important;
+                margin: 0 !important;
+            }
+            .p-6, .p-8 {
+                padding: 1rem !important;
+            }
+            .grid {
+                grid-template-columns: 1fr !important;
+                gap: 1rem !important;
+            }
+            .sm\:col-span-2 {
+                grid-column: span 1 / span 1 !important;
+            }
+            /* Reset specific card backgrounds */
+            .bg-gray-50, .bg-yellow-50 {
+                background-color: #f9fafb !important;
+            }
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+    <!-- Main Container -->
+    <div class="max-w-xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden">
+        <div class="p-6 sm:p-8 space-y-6">
+
+            <!-- Header (Always visible) -->
+            <div class="text-center">
+                <h1 class="text-3xl sm:text-4xl font-bold text-green-700">Vegetable Planner</h1>
+                <p class="mt-2 text-green-600 print-hide">Calculate your thinning and harvest dates!</p>
+            </div>
+
+            <!-- Input Form (Hidden on print) -->
+            <div class="space-y-4 print-hide">
+                <div>
+                    <label for="plantingDate" class="block text-sm font-medium text-gray-700">1. Enter Planting Date</label>
+                    <input type="date" id="plantingDate" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 transition-all">
+                </div>
+                <div>
+                    <label for="vegetableSelect" class="block text-sm font-medium text-gray-700">2. Select a Vegetable</label>
+                    <select id="vegetableSelect" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-green-500 focus:ring-green-500 transition-all">
+                        <option value="">-- Please Select --</option>
+                        <option value="Beets">Beets</option>
+                        <option value="Radishes">Radishes</option>
+                        <option value="Turnips">Turnips</option>
+                        <option value="Carrots">Carrots</option>
+                        <option value="Lettuce">Lettuce</option>
+                        <option value="Kale">Kale</option>
+                        <option value="Swiss Chard">Swiss Chard</option>
+                        <option value="Spinach">Spinach</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Print Button (Hidden until results shown, hidden on print) - MOVED BACK TO ORIGINAL SPOT -->
+            <button id="printReportButton" class="w-full bg-green-500 text-white font-semibold py-3 rounded-xl shadow-lg hover:bg-green-600 transition-colors hidden print-hide">
+                Print Classroom Report
+            </button>
+
+            <!-- Results Section -->
+            <div id="results" class="hidden">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    
+                    <!-- Row 1, Column 1: Initial Seeding Distance -->
+                    <div class="bg-gray-50 p-5 rounded-xl shadow-md space-y-3">
+                        <h3 class="text-lg font-semibold text-green-800">Initial Seeding Distance</h3>
+                        <p class="text-sm text-gray-500">The recommended distance between seeds when first planting.</p>
+                        <p class="text-2xl font-bold text-gray-900" id="seedingDistanceDisplay">--</p>
+                    </div>
+
+                    <!-- Row 1, Column 2: Germination Date -->
+                    <div class="bg-gray-50 p-5 rounded-xl shadow-md space-y-3">
+                        <h3 class="text-lg font-semibold text-green-800">Germination Date Range</h3>
+                        <p class="text-sm text-gray-500">The day your seeds should sprout!</p>
+                        <p class="text-2xl font-bold text-gray-900" id="germinationDateDisplay">--</p>
+                        
+                        <!-- Count Down with distinct background -->
+                        <div class="bg-green-100 p-2 rounded-lg mt-3 print-hide">
+                            <p class="text-lg font-semibold text-green-800" id="germinationCountdown">Calculating...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Row 2, Column 1: Thinning Date -->
+                    <div class="bg-gray-50 p-5 rounded-xl shadow-md space-y-3">
+                        <h3 class="text-lg font-semibold text-green-800">Thinning Date Range</h3>
+                        <p class="text-sm text-gray-500">Time to thin your seedlings for better growth.</p>
+                        <p class="text-2xl font-bold text-gray-900" id="thinningDateDisplay">--</p>
+                        <p class="text-sm font-medium text-gray-700 mt-2">Thin when plant is:</p>
+                        <p class="text-lg font-bold text-gray-900" id="thinningHeightDisplay">--</p>
+                        <p class="text-sm font-medium text-gray-700 mt-2">Space plants:</p>
+                        <p class="text-lg font-bold text-gray-900" id="thinningSpacingDisplay">--</p>
+                        
+                        <!-- Count Down with distinct background -->
+                        <div class="bg-green-100 p-2 rounded-lg mt-3 print-hide">
+                            <p class="text-lg font-semibold text-green-800" id="thinningCountdown">Calculating...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Row 2, Column 2: Harvesting Card -->
+                    <div class="bg-gray-50 p-5 rounded-xl shadow-md space-y-3">
+                        <h3 class="text-lg font-semibold text-green-800">Harvesting Date Range</h3>
+                        <p class="text-sm text-gray-500">The day to enjoy the fruits of your labor!</p>
+                        <p class="text-2xl font-bold text-gray-900" id="harvestDateDisplay">--</p>
+                        <p class="text-sm font-medium text-gray-700 mt-2">Harvest when plant is:</p>
+                        <p class="text-lg font-bold text-gray-900" id="harvestSizeDisplay">--</p>
+                        
+                        <!-- Count Down with distinct background -->
+                        <div class="bg-green-100 p-2 rounded-lg mt-3 print-hide">
+                            <p class="text-lg font-semibold text-green-800" id="harvestCountdown">Calculating...</p>
+                        </div>
+                    </div>
+
+                    <!-- Row 3, Spanning 2 columns: Growth Tip Card -->
+                    <div class="bg-yellow-50 p-5 rounded-xl shadow-md space-y-3 sm:col-span-2">
+                        <h3 class="text-lg font-semibold text-green-800">Growth Tips & Troubleshooting</h3>
+                        <p class="text-base font-medium text-gray-900" id="growthTipDisplay">--</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Message Box -->
+            <div id="messageBox" class="message-box rounded-xl print-hide">
+                <p id="messageText" class="text-center font-semibold text-gray-700 mb-4"></p>
+                <button id="closeButton" class="px-6 py-2 bg-green-500 text-white rounded-full hover:bg-green-600 transition-colors">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const vegetableData = {
+            Beets: { 
+                germinationDaysMin: 5, germinationDaysMax: 9, thinWeeksMin: 3, thinWeeksMax: 5, thinHeight: "2-3 inches", thinSpacing: "3-4 inches apart", harvestWeeksMin: 8, harvestWeeksMax: 10, harvestSize: "1-3 inches in diameter", seedingDistance: "1 inch apart", 
+                growthTip: "Beets need rich, well-drained soil. If planted in dry, rocky soil, they often fail to form proper roots and remain small and woody." 
+            },
+            Radishes: { 
+                germinationDaysMin: 3, germinationDaysMax: 7, thinWeeksMin: 1, thinWeeksMax: 3, thinHeight: "1-2 inches", thinSpacing: "2 inches apart", harvestWeeksMin: 3, harvestWeeksMax: 5, harvestSize: "1 inch in diameter", seedingDistance: "1/2 inch apart", 
+                growthTip: "Radishes must be planted in cool weather and harvested quickly. Hot weather can cause them to become pithy and overly spicy." 
+            },
+            Turnips: { 
+                germinationDaysMin: 3, germinationDaysMax: 7, thinWeeksMin: 2, thinWeeksMax: 4, thinHeight: "3-4 inches", thinSpacing: "4-6 inches apart", harvestWeeksMin: 7, harvestWeeksMax: 9, harvestSize: "2-3 inches in diameter", seedingDistance: "4 inches apart", 
+                growthTip: "Turnips are frost-tolerant. Mulch heavily to keep soil cool and moist for the best root development." 
+            },
+            Carrots: { 
+                germinationDaysMin: 10, germinationDaysMax: 20, thinWeeksMin: 3, thinWeeksMax: 5, thinHeight: "2 inches", thinSpacing: "2-3 inches apart", harvestWeeksMin: 10, harvestWeeksMax: 14, harvestSize: "1/2-1 inch in diameter", seedingDistance: "1/4 inch apart", 
+                growthTip: "Carrots need deep, loose, rock-free soil. If the soil is too dense, the roots will fork or become stubby." 
+            },
+            Lettuce: { 
+                germinationDaysMin: 6, germinationDaysMax: 10, thinWeeksMin: 2, thinWeeksMax: 4, thinHeight: "4 inches", thinSpacing: "6-12 inches apart", harvestWeeksMin: 7, harvestWeeksMax: 9, harvestSize: "A full head or outer leaves", seedingDistance: "1 inch apart", 
+                growthTip: "Lettuce is sensitive to heat. Plant in a spot with afternoon shade or succession plant small batches every two weeks." 
+            },
+            Kale: { 
+                germinationDaysMin: 6, germinationDaysMax: 10, thinWeeksMin: 3, thinWeeksMax: 5, thinHeight: "4-6 inches", thinSpacing: "12-18 inches apart", harvestWeeksMin: 9, harvestWeeksMax: 11, harvestSize: "Leaves are 8-10 inches long", seedingDistance: "4 inches apart", 
+                growthTip: "Kale tastes best when leaves are harvested after a light frost, which sweetens the flavor." 
+            },
+            "Swiss Chard": { 
+                germinationDaysMin: 6, germinationDaysMax: 10, thinWeeksMin: 3, thinWeeksMax: 5, thinHeight: "4 inches", thinSpacing: "6-12 inches apart", harvestWeeksMin: 8, harvestWeeksMax: 10, harvestSize: "Leaves are 6-8 inches long", seedingDistance: "2 inches apart", 
+                growthTip: "Swiss Chard is a 'cut-and-come-again' crop. Harvest the outer leaves first and leave the center stalk to continue growing." 
+            },
+            Spinach: { 
+                germinationDaysMin: 8, germinationDaysMax: 12, thinWeeksMin: 2, thinWeeksMax: 4, thinHeight: "2 inches", thinSpacing: "3-5 inches apart", harvestWeeksMin: 5, harvestWeeksMax: 7, harvestSize: "Leaves are 3-5 inches long", seedingDistance: "1 inch apart", 
+                growthTip: "Spinach bolts (goes to seed) quickly in hot weather. Keep the soil moist and plant in the cooler seasons." 
+            },
+        };
+
+        const plantingDateInput = document.getElementById('plantingDate');
+        const vegetableSelect = document.getElementById('vegetableSelect');
+        const resultsDiv = document.getElementById('results');
+        const printReportButton = document.getElementById('printReportButton'); 
+
+        const germinationDateDisplay = document.getElementById('germinationDateDisplay');
+        const germinationCountdownDisplay = document.getElementById('germinationCountdown');
+        const thinningDateDisplay = document.getElementById('thinningDateDisplay');
+        const harvestDateDisplay = document.getElementById('harvestDateDisplay');
+        const thinningCountdownDisplay = document.getElementById('thinningCountdown');
+        const harvestCountdownDisplay = document.getElementById('harvestCountdown');
+        const thinningHeightDisplay = document.getElementById('thinningHeightDisplay');
+        const thinningSpacingDisplay = document.getElementById('thinningSpacingDisplay');
+        const harvestSizeDisplay = document.getElementById('harvestSizeDisplay');
+        const seedingDistanceDisplay = document.getElementById('seedingDistanceDisplay');
+        const growthTipDisplay = document.getElementById('growthTipDisplay'); 
+        
+        const messageBox = document.getElementById('messageBox');
+        const messageText = document.getElementById('messageText');
+        const closeButton = document.getElementById('closeButton');
+
+        // Function to show a custom message box instead of alert()
+        function showMessage(message) {
+            messageText.textContent = message;
+            messageBox.style.display = 'block';
+        }
+
+        // Function to close the custom message box
+        closeButton.addEventListener('click', () => {
+            messageBox.style.display = 'none';
+        });
+
+        // Function to format the time remaining into a single day count or a range
+        function formatCountdown(minTimeRemaining, maxTimeRemaining = minTimeRemaining) {
+            let result;
+
+            // If the entire window is past due (check max time)
+            if (maxTimeRemaining < 0) {
+                result = "Past due!";
+            } else {
+                // Calculate days remaining, rounding up to the next day
+                const minDays = Math.ceil(minTimeRemaining / (1000 * 60 * 60 * 24));
+                const maxDays = Math.ceil(maxTimeRemaining / (1000 * 60 * 60 * 24));
+                
+                // Ensure the minimum displayed day is at least 0 (if planting was today/yesterday)
+                const displayMinDays = Math.max(0, minDays);
+
+                if (displayMinDays === maxDays) {
+                    // Single day count 
+                    if (displayMinDays === 0) result = "Today!";
+                    else if (displayMinDays === 1) result = "1 day"; // Removed "In"
+                    else result = `${displayMinDays} days`; // Removed "In"
+                } else {
+                    // Range count
+                    if (displayMinDays === 0) {
+                        result = `Today to ${maxDays} days`;
+                    } else {
+                        result = `${displayMinDays} to ${maxDays} days`; // Removed "In"
+                    }
+                }
+            }
+            
+            // Prepend the requested phrase
+            return `Countdown: ${result}`; // Changed "Count Down:" to "Countdown:"
+        }
+        
+        // Function to calculate and display the dates
+        function calculateDates() {
+            const plantingDateStr = plantingDateInput.value;
+            const selectedVeg = vegetableSelect.value;
+
+            if (!plantingDateStr || !selectedVeg) {
+                // Hide results and print button if input is incomplete
+                resultsDiv.classList.add('hidden');
+                printReportButton.classList.add('hidden');
+                return;
+            }
+
+            const plantingDate = new Date(plantingDateStr + 'T00:00:00');
+            const today = new Date();
+            const vegData = vegetableData[selectedVeg];
+
+            // Get min/max days for all stages
+            const germinationDaysMin = vegData.germinationDaysMin;
+            const germinationDaysMax = vegData.germinationDaysMax;
+
+            const daysToThinMin = vegData.thinWeeksMin * 7;
+            const daysToThinMax = vegData.thinWeeksMax * 7;
+            const daysToHarvestMin = vegData.harvestWeeksMin * 7;
+            const daysToHarvestMax = vegData.harvestWeeksMax * 7;
+            
+            // Calculate Germination Date Range
+            const germinationDateMin = new Date(plantingDate);
+            germinationDateMin.setDate(plantingDate.getDate() + germinationDaysMin);
+            const germinationDateMax = new Date(plantingDate);
+            germinationDateMax.setDate(plantingDate.getDate() + germinationDaysMax);
+
+            // Calculate Thinning Date Range
+            const thinningDateMin = new Date(plantingDate);
+            thinningDateMin.setDate(plantingDate.getDate() + daysToThinMin);
+            const thinningDateMax = new Date(plantingDate);
+            thinningDateMax.setDate(plantingDate.getDate() + daysToThinMax);
+
+            // Calculate Harvest Date Range
+            const harvestDateMin = new Date(plantingDate);
+            harvestDateMin.setDate(plantingDate.getDate() + daysToHarvestMin);
+            const harvestDateMax = new Date(plantingDate);
+            harvestDateMax.setDate(plantingDate.getDate() + daysToHarvestMax);
+
+            // Calculate time remaining for countdowns
+            const germinationTimeRemainingMin = germinationDateMin.getTime() - today.getTime(); 
+            const germinationTimeRemainingMax = germinationDateMax.getTime() - today.getTime(); 
+            const thinningTimeRemainingMin = thinningDateMin.getTime() - today.getTime(); 
+            const thinningTimeRemainingMax = thinningDateMax.getTime() - today.getTime();
+            const harvestTimeRemainingMin = harvestDateMin.getTime() - today.getTime(); 
+            const harvestTimeRemainingMax = harvestDateMax.getTime() - today.getTime(); 
+            
+            // Format dates for display
+            const formatter = new Intl.DateTimeFormat('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            // Display calculated data
+            // GERMINATION DATE DISPLAY: Show date range
+            germinationDateDisplay.textContent = `${formatter.format(germinationDateMin)} - ${formatter.format(germinationDateMax)}`;
+            
+            // THINNING DATE DISPLAY: Show date range
+            thinningDateDisplay.textContent = `${formatter.format(thinningDateMin)} - ${formatter.format(thinningDateMax)}`;
+            
+            // HARVEST DATE DISPLAY: Show date range
+            harvestDateDisplay.textContent = `${formatter.format(harvestDateMin)} - ${formatter.format(harvestDateMax)}`;
+            
+            thinningHeightDisplay.textContent = vegData.thinHeight;
+            thinningSpacingDisplay.textContent = vegData.thinSpacing;
+            harvestSizeDisplay.textContent = vegData.harvestSize;
+            seedingDistanceDisplay.textContent = vegData.seedingDistance;
+            growthTipDisplay.textContent = vegData.growthTip;
+
+            // Display countdowns
+            germinationCountdownDisplay.textContent = formatCountdown(germinationTimeRemainingMin, germinationTimeRemainingMax);
+            thinningCountdownDisplay.textContent = formatCountdown(thinningTimeRemainingMin, thinningTimeRemainingMax);
+            harvestCountdownDisplay.textContent = formatCountdown(harvestTimeRemainingMin, harvestTimeRemainingMax);
+
+            // Show the results section and print button
+            resultsDiv.classList.remove('hidden');
+            printReportButton.classList.remove('hidden');
+        }
+
+        // Print Report Functionality
+        printReportButton.addEventListener('click', () => {
+            window.print();
+        });
+
+        // Event listeners to trigger calculations on input change
+        plantingDateInput.addEventListener('change', calculateDates);
+        vegetableSelect.addEventListener('change', calculateDates);
+
+    </script>
+
+</body>
+</html>
